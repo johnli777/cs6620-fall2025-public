@@ -1,3 +1,5 @@
+# Version: 2.0
+# Built with GitHub Actions, deployed to EC2 via AWS SSM
 import os
 import re
 import csv
@@ -6,9 +8,37 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 from flask_cors import CORS
 from pydub import AudioSegment
 import tempfile
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 CORS(app)
+
+# Deployment info shown on the home page banner and /health (version 2.0)
+APP_VERSION = "2.0"
+DEPLOY_METHOD = "GitHub Actions + AWS SSM"
+CONTAINER_STARTED = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+@app.context_processor
+def inject_deploy_info():
+    return {
+        "app_version": APP_VERSION,
+        "deploy_method": DEPLOY_METHOD,
+        "git_sha": os.environ.get("GIT_SHA", "local")[:7],
+        "run_number": os.environ.get("RUN_NUMBER", "n/a"),
+        "deployed_at": os.environ.get("DEPLOYED_AT", "n/a"),
+        "container_started": CONTAINER_STARTED,
+    }
+
+@app.route('/health')
+def health():
+    return {
+        'status': 'healthy',
+        'version': APP_VERSION,
+        'deployment_method': 'automated',
+        'git_sha': os.environ.get("GIT_SHA", "local"),
+        'deployed_at': os.environ.get("DEPLOYED_AT", "n/a"),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+    }
 
 # Global variables for playlist management
 current_directory = None
